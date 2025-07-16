@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz de Banco de Dados</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .question-text {
+            font-size: 1.75rem; /* text-3xl */
+            font-weight: 600; /* font-semibold */
+            color: #1a202c; /* gray-900 */
+            margin-bottom: 24px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .options-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .option-button {
+            background-color: #edf2f7; /* gray-200 */
+            color: #2d3748; /* gray-800 */
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 500; /* font-medium */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .option-button:hover:not(.correct):not(.incorrect):not(.disabled) {
+            background-color: #e2e8f0; /* gray-300 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+        .option-button.correct {
+            background-color: #48bb78; /* green-500 */
+            color: #ffffff;
+            border-color: #38a169; /* green-600 */
+            box-shadow: 0 4px 10px rgba(72, 187, 120, 0.4);
+            animation: pulse-green 0.5s ease-out;
+        }
+        .option-button.incorrect {
+            background-color: #f56565; /* red-500 */
+            color: #ffffff;
+            border-color: #e53e3e; /* red-600 */
+            box-shadow: 0 4px 10px rgba(245, 101, 101, 0.4);
+            animation: shake 0.3s ease-in-out;
+        }
+        .option-button.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .feedback-message {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            margin-bottom: 24px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .feedback-message.show {
+            opacity: 1;
+        }
+        .feedback-message.correct-text {
+            color: #38a169; /* green-600 */
+        }
+        .feedback-message.incorrect-text {
+            color: #e53e3e; /* red-600 */
+        }
+        .next-button {
+            background-color: #4299e1; /* blue-500 */
+            color: #ffffff;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 700; /* font-bold */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 10px rgba(66, 153, 225, 0.3);
+        }
+        .next-button:hover {
+            background-color: #3182ce; /* blue-600 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(66, 153, 225, 0.4);
+        }
+        .score-display {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 700; /* font-bold */
+            color: #2d3748; /* gray-800 */
+            margin-top: 16px;
+        }
+
+        /* Keyframe Animations */
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 4px 10px rgba(72, 187, 120, 0.4); }
+            50% { transform: scale(1.02); box-shadow: 0 8px 20px rgba(72, 187, 120, 0.6); }
+            100% { transform: scale(1); box-shadow: 0 4px 10px rgba(72, 187, 120, 0.4); }
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Quiz de Banco de Dados</h1>
+        <div class="question-text" id="question-text"></div>
+        <div class="options-grid" id="options-container">
+            <!-- Options will be dynamically loaded here -->
+        </div>
+        <div class="feedback-message" id="feedback-message"></div>
+        <button class="next-button hidden" id="next-button">Próxima Pergunta</button>
+        <div class="score-display">Pontuação: <span id="score">0</span> / <span id="total-questions">0</span></div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: "Qual dos seguintes é um sistema de gerenciamento de banco de dados relacional (SGBDR)?",
+                options: ["a) MongoDB", "b) Cassandra", "c) MySQL", "d) Redis"],
+                correct: "c) MySQL"
+            },
+            {
+                question: "O que significa a sigla SQL?",
+                options: ["a) Standard Query Language", "b) Structured Question Language", "c) Simple Query Logic", "d) Structured Query Language"],
+                correct: "d) Structured Query Language"
+            },
+            {
+                question: "Qual é o principal objetivo da normalização em um banco de dados?",
+                options: ["a) Aumentar a redundância de dados", "b) Reduzir a integridade dos dados", "c) Eliminar redundância e melhorar a integridade", "d) Dificultar a consulta de dados"],
+                correct: "c) Eliminar redundância e melhorar a integridade"
+            },
+            {
+                question: "Em um modelo ER (Entidade-Relacionamento), o que representa um retângulo?",
+                options: ["a) Atributo", "b) Relacionamento", "c) Entidade", "d) Chave Primária"],
+                correct: "c) Entidade"
+            },
+            {
+                question: "Qual tipo de banco de dados é ideal para armazenar dados não estruturados ou semi-estruturados?",
+                options: ["a) Relacional", "b) NoSQL", "c) Hierárquico", "d) Rede"],
+                correct: "b) NoSQL"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false; // Flag to prevent multiple answers per question
+
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score');
+        const totalQuestionsDisplay = document.getElementById('total-questions');
+
+        // Set total questions count
+        totalQuestionsDisplay.textContent = questions.length;
+
+        /**
+         * Loads and displays the current question and its options.
+         */
+        function loadQuestion() {
+            answered = false; // Reset answered flag for new question
+            const currentQuestion = questions[currentQuestionIndex];
+            questionText.textContent = currentQuestion.question;
+            optionsContainer.innerHTML = ''; // Clear previous options
+            feedbackMessage.textContent = ''; // Clear feedback message
+            feedbackMessage.classList.remove('show', 'correct-text', 'incorrect-text'); // Hide and reset feedback classes
+            nextButton.classList.add('hidden'); // Hide next button
+
+            currentQuestion.options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('option-button');
+                button.addEventListener('click', () => selectAnswer(button, option));
+                optionsContainer.appendChild(button);
+            });
+            updateScoreDisplay();
+        }
+
+        /**
+         * Handles the user's answer selection.
+         * @param {HTMLButtonElement} selectedButton - The button element that was clicked.
+         * @param {string} selectedOption - The text of the selected option.
+         */
+        function selectAnswer(selectedButton, selectedOption) {
+            if (answered) return; // Prevent multiple answers
+            answered = true;
+
+            const currentQuestion = questions[currentQuestionIndex];
+            const isCorrect = (selectedOption === currentQuestion.correct);
+
+            // Apply styling based on correctness
+            if (isCorrect) {
+                selectedButton.classList.add('correct');
+                score++;
+                feedbackMessage.textContent = 'Correto!';
+                feedbackMessage.classList.add('correct-text');
+            } else {
+                selectedButton.classList.add('incorrect');
+                feedbackMessage.textContent = 'Incorreto. A resposta correta era: ' + currentQuestion.correct;
+                feedbackMessage.classList.add('incorrect-text');
+                // Highlight the correct answer if the user was wrong
+                Array.from(optionsContainer.children).forEach(button => {
+                    if (button.textContent === currentQuestion.correct) {
+                        button.classList.add('correct');
+                    }
+                });
+            }
+
+            // Show feedback message
+            feedbackMessage.classList.add('show');
+
+            // Disable all option buttons after an answer is selected
+            Array.from(optionsContainer.children).forEach(button => {
+                button.classList.add('disabled');
+                button.removeEventListener('click', () => {}); // Remove event listener
+            });
+
+            // Show the next question button
+            nextButton.classList.remove('hidden');
+            updateScoreDisplay();
+        }
+
+        /**
+         * Moves to the next question or ends the quiz.
+         */
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        /**
+         * Updates the score display.
+         */
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = score;
+        }
+
+        /**
+         * Displays the final score and an option to restart the quiz.
+         */
+        function endQuiz() {
+            questionText.textContent = `Quiz Concluído! Sua pontuação final é ${score} de ${questions.length}.`;
+            optionsContainer.innerHTML = '';
+            feedbackMessage.textContent = '';
+            feedbackMessage.classList.remove('show', 'correct-text', 'incorrect-text');
+            nextButton.textContent = 'Reiniciar Quiz';
+            nextButton.classList.remove('hidden');
+            nextButton.removeEventListener('click', nextQuestion); // Remove previous listener
+            nextButton.addEventListener('click', restartQuiz); // Add restart listener
+            updateScoreDisplay();
+        }
+
+        /**
+         * Restarts the quiz from the beginning.
+         */
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            nextButton.textContent = 'Próxima Pergunta';
+            nextButton.removeEventListener('click', restartQuiz); // Remove restart listener
+            nextButton.addEventListener('click', nextQuestion); // Add next question listener
+            loadQuestion();
+        }
+
+        // Initial load of the first question
+        window.onload = loadQuestion;
+        nextButton.addEventListener('click', nextQuestion);
+    </script>
+</body>
+</html>
